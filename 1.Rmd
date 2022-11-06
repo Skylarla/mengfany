@@ -1,0 +1,109 @@
+---
+title: "mengfany_week1"
+author: "Mengfan YU"
+date: "2022-11-03"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### There are some packages that we should install at first.
+
+```{r}
+options(repos = list(CRAN="http://cran.rstudio.com/"))
+install.packages("sf")
+install.packages("ggplot2")
+install.packages("tidyverse")
+
+```
+
+Then, use these packages.
+
+```{r}
+library(ggplot2)
+library(sf)
+library(tidyverse)
+
+```
+
+## `ggplot` and `geom_sf` function
+
+The first map shows the topology of Moutain Parks of Boulder Colorado by using `topo.colors()`. The blue area means low elevation, while the yellow means high elevation.
+
+In the second map, I used the `ifelse()` function to present the area where the distance to streets and parking lots is less than 50 meters. This map indicates the areas where human activities are active.
+
+
+```{r}
+
+boulder <- st_read("M:/geoviz/week1/Boulder_Data/BoulderSocialMedia.shp")
+boulder = st_transform (boulder, 26753) 
+
+ggplot() +
+    geom_sf(data =boulder, aes(color=PT_Elev),
+    fill = NA, alpha = .2) +
+  scale_colour_gradientn(colours = topo.colors(12)) +  
+  theme_bw()
+
+
+library(dplyr)
+
+boulder %>%
+    mutate(street_buffer = ifelse(Street_dis <= 50, TRUE, FALSE))%>% 
+ggplot() +
+  geom_sf(aes(color=street_buffer),
+    fill = NA, alpha = .2)  +  
+  theme_bw()
+
+
+```
+
+
+
+## Boxplot 
+```{r}
+
+boulder %>%
+  filter(DB ==  'Pano' | DB == 'Flickr') %>%
+  ggplot(aes(x=DB, y=Hydro_dis)) + 
+  geom_boxplot()
+
+```
+The Y axis represents the distance to lakes, rivers, and creeks, and the X axis represents the photos posted by people that come from social media "Flickr" or "Pano". 
+
+As we can see in the chart,  comparing the mean distance of these photographs from the nearest water body, the distance to lakes and other water body has a significant relationship with photographs on social media. The mean value is about 1600 meters, which means people take pictures at a distance of 1600 meters from the water body. 
+
+
+## tmap
+
+```{r}
+
+install.packages("tmap")
+
+```
+
+Using `tmap` to make an interactive map
+
+```{r}
+
+library(tmap)
+tmap_mode("view")
+
+## Add the data - these are specific to the vector or raster
+tm_shape(boulder) + 
+  ## which variable, is there a class interval, palette, and other options
+  tm_symbols(col='PT_Elev',
+             style='quantile',
+             palette = 'YlOrRd',
+             border.lwd = NA,
+             size = 0.1,
+             title.size="Elevation in Boulder Colorado",
+        title.col="Elevation (meters)"
+  )
+
+```
+
+The end.
