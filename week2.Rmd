@@ -1,0 +1,126 @@
+---
+title: "week2 LiDAR Data"
+author: "mengfany"
+date: "11/10/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Data and software
+
+```{r}
+options(repos = list(CRAN="http://cran.rstudio.com/"))
+install.packages("sf")
+install.packages("raster")
+install.packages("rgdal")
+install.packages("tmap")
+install.packages("tmaptools")
+install.packages("lidR")
+install.packages("RStoolbox")
+install.packages("ggplot2")
+install.packages("ggspatial")
+install.packages("gstat")
+install.packages("rayshader")
+
+```
+
+```{r}
+options(repos = list(CRAN="http://cran.rstudio.com/"))
+library(sf)
+library(raster)
+library(rgdal)
+library(raster)
+library(tmap)
+library(tmaptools)
+library(lidR)
+library(RStoolbox)
+library(ggplot2)
+```
+
+### LiDAR Data
+
+The data is from LiDAR sensors recording in Ann Arbor.
+
+```{r}
+las <- readLAS("M:/geoviz/week2/Pointclouds_AnnArbor/292287.las")
+
+###"NAD83(HARN) / Michigan South (ft) + NAVD88 height - Geoid12B
+CRS("+init=epsg:8705")
+epsg(las) <- 8705
+summary(las)
+
+```
+
+### Visualize the data by `plot()`function.
+
+```{r}
+plot(las, color = "Intensity", pal="auto", breaks = "pretty", bg ="gray")
+
+```
+
+
+
+```{r}
+lasArb <- readLAS("M:/geoviz/week2/Pointclouds_AnnArbor/292287.las")
+###NAD83(HARN) / Michigan South
+CRS("+init=epsg:8705")
+epsg(lasArb) <- 8705
+summary(lasArb)
+
+```
+
+```{r}
+library(raster)
+slope <- terrain(dtm3, opt='slope')
+aspect <- terrain(dtm3, opt='aspect')
+hs <- hillShade(slope, aspect, angle=45, direction=315)
+
+tm_shape(hs)+
+tm_raster(style= "cont", palette=get_brewer_pal("Greys", plot=FALSE))+
+tm_layout(legend.outside = TRUE)
+
+```
+
+The `rayshader()` package also provides interesting tools to generate shaded DTM.
+
+```{r}
+
+library(rayshader)
+elmat <- raster_to_matrix(dtm3)
+#> [1] "Dimensions of matrix are: 284x284."
+map <- elmat %>%
+  sphere_shade(texture = "imhof1", progbar = FALSE) %>%
+  add_water(detect_water(elmat), color = "imhof1") %>%
+  add_shadow(ray_shade(elmat, progbar = FALSE), 0.5) %>%
+  add_shadow(ambient_shade(elmat, progbar = FALSE), 0)
+```
+
+Here are the plotting options for this hillshade layer, we can see the hillshade is mainly concentrated on one side, and there is not much hill shadow in the place where many buildings exist.
+
+```{r}
+plot_map(map)
+plot_3d(map, elmat, zscale = 5, windowsize = c(800, 800))
+```
+
+## DSM (Digital Surface Model)
+
+This map presents the surface, including trees, buildings, roads, etc. It chooses `grid_canopy()` to show the top of all features. The surface model can show the "local maximum" (the highest points).
+
+We can observe on the 3D map about half of the area is full of tall trees, while buildings and roads occupy the other half. The small trees are near the roads.
+
+```{r, message=FALSE}
+dsm <- grid_canopy(lasArb, res = 3, pitfree(c(0,2,5,10,15), c(0, 1)))
+
+tm_shape(dsm)+
+tm_raster(style= "cont", palette=get_brewer_pal("Greys", plot=FALSE))+
+tm_layout(legend.outside = TRUE)
+
+plot_dtm3d(dsm)
+```
+
+## The end
